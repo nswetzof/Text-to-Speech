@@ -36,25 +36,12 @@ namespace HttpClientSample {
             // post to the server
             using(HttpResponseMessage response = await client.PostAsync(url, jsonContent)) {
                 if(response.IsSuccessStatusCode) {
-                    // read data as a stream
-                    byte[] responseBytes = new byte[4096];
+                    using (FileStream fs = File.Create("test.mp3")) {
+                        byte[] byteStream = await response.Content.ReadAsByteArrayAsync();
 
+                        fs.Write(byteStream, 0, (int) byteStream.Length);
 
-                    using(Stream audioChunk = await response.Content.ReadAsStreamAsync()) {
-                        using (FileStream fs = File.Create("test.mp3")) {
-                            int responseValue;
-
-                            while((responseValue = await audioChunk.ReadAsync(responseBytes, 0, responseBytes.Length)) > 0) {
-                                if(audioChunk.Length - audioChunk.Position < responseBytes.Length)
-                                    fs.Write(responseBytes, 0, (int) (audioChunk.Length - audioChunk.Position));
-                                else
-                                    fs.Write(responseBytes, 0, responseBytes.Length);
-
-                            }
-                            // string responseText = await response.Content.ReadAsStringAsync();
-
-                            return "success";
-                        }
+                        return "success";
                     }
                 }
             }
