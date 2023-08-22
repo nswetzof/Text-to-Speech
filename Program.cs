@@ -13,7 +13,7 @@ using System.Text;
 namespace HttpClientSample {
     public class Program {
         private static string API_KEY = "0591d8c076c8faeb2b9acfd16aadfffd";
-        static HttpClient client = new HttpClient();
+        static readonly HttpClient client = new HttpClient();
 
         static async Task<string?> GenerateVoice(string voiceId) {
             string url = $"https://api.elevenlabs.io/v1/text-to-speech/{voiceId}/stream";
@@ -50,8 +50,40 @@ namespace HttpClientSample {
 
             // return response.StatusCode.ToString();
         }
+
+        private static async Task UploadVoice(string file) {
+            string url = "https://api.elevenlabs.io/v1/voices/add";
+            client.BaseAddress = new Uri(url);
+
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("multipart/form-data"));
+            client.DefaultRequestHeaders.Add("x-api-key", Program.API_KEY);
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+            // create form data handler
+            var content = new MultipartFormDataContent();
+
+            content.Add(new StringContent("Obama"), "name");
+            content.Add(new StringContent("Obama speaking in a normal tone"));
+            // content.Add(new StringContent("{\"accent\":\"American\"}"));
+            var dataContent = new FormUrlEncodedContent(new[] {
+                new KeyValuePair<string, string>("accent", "American"),
+            });
+            content.Add(dataContent);
+            // byte[] bytes = await File.ReadAllBytesAsync(file);
+            content.Add(new ByteArrayContent(await File.ReadAllBytesAsync(file)), "sample1", "sample1.mp3");
+
+            using(HttpResponseMessage response = await client.PostAsync(url, content)) {
+                if(response.IsSuccessStatusCode) {
+                    Console.WriteLine("Success!");
+                }
+                else
+                    Console.WriteLine(response.StatusCode.ToString());
+            }
+
+        }
         static void Main() {
-            Console.WriteLine(GenerateVoice("21m00Tcm4TlvDq8ikWAM").GetAwaiter().GetResult());
+            // Console.WriteLine(GenerateVoice("21m00Tcm4TlvDq8ikWAM").GetAwaiter().GetResult());
+            UploadVoice("sample1.mp3").GetAwaiter().GetResult();
         }
     }
 }
