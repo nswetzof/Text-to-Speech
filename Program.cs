@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using System.Text;
 using System.Text.Json.Nodes;
 using Newtonsoft.Json.Linq;
+using System.Runtime.CompilerServices;
 
 namespace HttpClientSample {
     public class Program {
@@ -29,9 +30,6 @@ namespace HttpClientSample {
                     
                     JObject responseJson = JObject.Parse(voiceString);
 
-                    foreach(var item in responseJson["voices"])
-                        Console.WriteLine((string) item["name"]);
-
                     var id = 
                         from item in responseJson["voices"]
                         where (string) item["name"] == voiceName
@@ -47,17 +45,16 @@ namespace HttpClientSample {
             }
         }
 
-        static async Task<string?> GenerateVoice(string voiceId) {
+        static async Task<string?> GenerateVoiceAsync(string voiceId, string filePath = "Content.txt") {
             string url = $"https://api.elevenlabs.io/v1/text-to-speech/{voiceId}/stream";
 
-            // client.BaseAddress = new Uri(url);
             client.DefaultRequestHeaders.Add("Accept", "audio/mpeg");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             client.DefaultRequestHeaders.Add("xi-api-key", Program.API_KEY);
 
             // HTTP body content
             var content = new {
-                text = "How fucking STUPID are you?  I mean REALLY?  I can't believe how terrible of an idea that was!",
+                text = getTextFromFile(filePath),
                 model_id = "eleven_monolingual_v1",
                 voice_settings = new {
                     stability = 0.5, similarity_boost = 0.5
@@ -81,6 +78,27 @@ namespace HttpClientSample {
             return "failure";
 
             // return response.StatusCode.ToString();
+        }
+
+        /* Read text from a file
+        
+        */
+        static string getTextFromFile(string file) {
+            StringBuilder fullString = new StringBuilder();
+
+            try {
+                using(StreamReader reader = new StreamReader(file)) {
+                    string? line;
+                    while((line = reader.ReadLine()) != null)
+                        fullString.Append(line);
+                }
+            } catch(FileNotFoundException) {
+                Console.WriteLine("File not found.");
+            } catch(IOException e) {
+                Console.WriteLine($"Error: {e.Message}");
+            }
+
+            return fullString.ToString();
         }
 
         private static async Task UploadVoice(string file) {
@@ -115,11 +133,10 @@ namespace HttpClientSample {
 
         }
         static async Task Main(string[] args) {
-            // Console.WriteLine(GenerateVoice("21m00Tcm4TlvDq8ikWAM").GetAwaiter().GetResult());
-            string? voiceId = await GetVoiceAsync("Rachel");
+            string? voiceId = await GetVoiceAsync("Fin");
             
             if(voiceId != null) {
-                await GenerateVoice(voiceId);
+                await GenerateVoiceAsync(voiceId);
             }
         }
     }
