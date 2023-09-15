@@ -24,33 +24,40 @@ namespace HttpClientSample {
 
             using (HttpResponseMessage response = await client.GetAsync(new Uri($"{client.BaseAddress}/voices"))) {
                 if(response.IsSuccessStatusCode) {
-                    string? voiceString = JsonConvert.SerializeObject(await response.Content.ReadAsStringAsync());
+                    string? serialString = JsonConvert.SerializeObject(await response.Content.ReadAsStringAsync());
+                    string? voiceString = JsonConvert.DeserializeObject<string>(serialString);
                     
                     JObject responseJson = JObject.Parse(voiceString);
 
+                    foreach(var item in responseJson["voices"])
+                        Console.WriteLine((string) item["name"]);
+
                     var id = 
                         from item in responseJson["voices"]
-                        where (string) (item["name"]) == voiceName
+                        where (string) item["name"] == voiceName
                         select (string) item["voice_id"];
 
-                    return id.First();
+                    if(id.Count() > 0)
+                        return id.First();
+                    else
+                        throw new Exception($"Error: {voiceName} not found.");
                 }
                 else
-                    return "failure: " + response.ReasonPhrase;
+                    throw new Exception("Error: " + response.ReasonPhrase);
             }
         }
 
         static async Task<string?> GenerateVoice(string voiceId) {
             string url = $"https://api.elevenlabs.io/v1/text-to-speech/{voiceId}/stream";
 
-            client.BaseAddress = new Uri(url);
+            // client.BaseAddress = new Uri(url);
             client.DefaultRequestHeaders.Add("Accept", "audio/mpeg");
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             client.DefaultRequestHeaders.Add("xi-api-key", Program.API_KEY);
 
             // HTTP body content
             var content = new {
-                text = "This is a test of how well exporting to an mp3 file works in csharp",
+                text = "How fucking STUPID are you?  I mean REALLY?  I can't believe how terrible of an idea that was!",
                 model_id = "eleven_monolingual_v1",
                 voice_settings = new {
                     stability = 0.5, similarity_boost = 0.5
@@ -107,10 +114,13 @@ namespace HttpClientSample {
             }
 
         }
-        static void Main() {
+        static async Task Main(string[] args) {
             // Console.WriteLine(GenerateVoice("21m00Tcm4TlvDq8ikWAM").GetAwaiter().GetResult());
-            Console.WriteLine(GetVoiceAsync("Emma Watson").GetAwaiter().GetResult());
-            // UploadVoice("sample1.mp3").GetAwaiter().GetResult();
+            string? voiceId = await GetVoiceAsync("Rachel");
+            
+            if(voiceId != null) {
+                await GenerateVoice(voiceId);
+            }
         }
     }
 }
